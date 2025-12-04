@@ -14,7 +14,7 @@ public class AccountProcessHandler {
         this.transactionManager = transactionManager;
         this.accountManager = accountManager;
     }
-    private static void createAccount() {
+    public static void createAccount() {
         System.out.println("\nCREATE ACCOUNT");
         System.out.print("Enter customer name: ");
         String name = scanner.nextLine().trim();
@@ -66,7 +66,7 @@ public class AccountProcessHandler {
         }
     }
 
-    private static void viewAccountDetails() {
+    public static void viewAccountDetails() {
         System.out.println("\nVIEW ACCOUNT DETAILS");
         System.out.print("Enter Account Number: ");
         String accountNumber = scanner.nextLine().trim();
@@ -93,7 +93,7 @@ public class AccountProcessHandler {
         }
     }
 
-    private static void listAllAccounts() {
+    public static void listAllAccounts() {
         System.out.println("\nLIST ALL ACCOUNTS");
         if (accountManager.getTotalAccounts() == 0) {
             System.out.println("No accounts found.");
@@ -108,6 +108,25 @@ public class AccountProcessHandler {
                     account.getCustomer().getName(),
                     account.getBalance());
         }
+    }
+    public void initializeSampleData() {
+        Customer customer1 = new RegularCustomer("John Smith", 35, "+1-555-0101", "456 Elm Street, Metropolis");
+        Customer customer2 = new RegularCustomer("Sarah Johnson", 28, "+1-555-0102", "789 Oak Avenue, Metropolis");
+        Customer customer3 = new PremiumCustomer("Michael Chen", 42, "+1-555-0103", "321 Pine Road, Metropolis");
+        Customer customer4 = new RegularCustomer("Emily Brown", 31, "+1-555-0104", "654 Maple Drive, Metropolis");
+        Customer customer5 = new PremiumCustomer("David Wilson", 48, "+1-555-0105", "987 Cedar Lane, Metropolis");
+
+        Account account1 = new SavingsAccount(customer1, 5250.00);
+        Account account2 = new CheckingAccount(customer2, 3450.00);
+        Account account3 = new SavingsAccount(customer3, 15750.00);
+        Account account4 = new CheckingAccount(customer4, 890.00);
+        Account account5 = new SavingsAccount(customer5, 25300.00);
+
+        accountManager.addAccount(account1);
+        accountManager.addAccount(account2);
+        accountManager.addAccount(account3);
+        accountManager.addAccount(account4);
+        accountManager.addAccount(account5);
     }
 
 

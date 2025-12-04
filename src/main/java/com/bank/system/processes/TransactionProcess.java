@@ -10,15 +10,16 @@ import java.util.List;
 import static com.bank.system.utils.ConsoleFormatter.*;
 import static com.bank.system.utils.ConsoleUtil.*;
 
-public class TransactionProcessor {
+public class TransactionProcess {
 
     private final TransactionManager transactionManager;
     private final AccountManager accountManager;
 
-    public TransactionProcessor(AccountManager accountManager, TransactionManager transactionManager) {
+    public TransactionProcessHandler(TransactionManager transactionManager, AccountManager accountManager) {
         this.transactionManager = transactionManager;
         this.accountManager = accountManager;
     }
+
 
     private void execute() {
         print(" ");

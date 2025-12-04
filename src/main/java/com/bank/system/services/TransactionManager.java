@@ -8,9 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import java.util.stream.Collectors;
-import static com.bank.system.utils.ConsoleFormatter.printSeparator;
-import static com.bank.system.utils.ConsoleFormatter.printSubSeparator;
-import static com.bank.system.utils.ConsoleUtil.*;
 
 public class TransactionManager {
     private List<Transaction> allTransactions;
@@ -18,7 +15,7 @@ public class TransactionManager {
     private AccountManager accountManager;
     private int transactionCount;
 
-    public TransactionManager(AccountManager accountManager) {
+    public TransactionManager() {
         this.accountManager = accountManager;
         this.allTransactions = new ArrayList<>();
 
@@ -81,9 +78,6 @@ public class TransactionManager {
     public int getTransactionCount() {
         return transactionCount;
     }
-
-
-
 
 
     public boolean deposit(String accountNumber, double amount) throws InvalidAmountException, InsufficientFundsException, OverdraftExceededException {
@@ -190,6 +184,16 @@ public class TransactionManager {
     }
     public void removeTransaction(String transactionId) {
         allTransactions.removeIf(transaction -> transaction.getTransactionId().equals(transactionId));
+    }
+    public Transaction getLastTransaction(String accountNumber) {
+        if (allTransactions == null || allTransactions.isEmpty()) return null;
+        for (int i = allTransactions.size() - 1; i >= 0; i--) {
+            Transaction transaction = allTransactions.get(i);
+            if (transaction != null && accountNumber.equals(transaction.getAccountNumber())) {
+                return transaction;
+            }
+        }
+        return null;
     }
 
 }

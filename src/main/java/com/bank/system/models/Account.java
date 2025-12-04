@@ -58,6 +58,14 @@ public abstract class Account implements Transactable {
     public void addTransaction(Transaction transaction) {
         this.transactions.add(transaction);
     }
+   public void removeTransaction(Transaction transaction) {
+       this.transactions.remove(transaction);
+   }
+
+   public boolean removeTransactionById(String transactionId) {
+       if (transactionId == null) return false;
+       return this.transactions.removeIf(t -> transactionId.equals(t.getTransactionId()));
+   }
 
     public double getBalance() {
         return balance;

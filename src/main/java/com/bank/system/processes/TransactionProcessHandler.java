@@ -1,8 +1,13 @@
 package com.bank.system.processes;
 
 import com.bank.system.exceptions.*;
+import com.bank.system.models.Account;
+import com.bank.system.models.SavingsAccount;
+import com.bank.system.models.Transaction;
 import com.bank.system.services.AccountManager;
 import com.bank.system.services.TransactionManager;
+
+import static com.bank.system.utils.ConsoleUtil.*;
 
 public class TransactionProcessHandler {
     private final TransactionManager transactionManager;
@@ -12,41 +17,72 @@ public class TransactionProcessHandler {
         this.transactionManager = transactionManager;
         this.accountManager = accountManager;
     }
-    private  void performDeposit(String accountNumber) throws InvalidAmountException, InsufficientFundsException, OverdraftExceededException {
-        System.out.print("Enter amount to deposit: $");
-        double amount = getPositiveAmount();
+    public void performDeposit(String accountNumber) throws InvalidAmountException, InsufficientFundsException, OverdraftExceededException {
+
+        double amount = getValidDoubleInput("Enter amount to deposit: $",
+                v -> v > 0,
+                "Amount must be greater than zero.");
 
         Account account = accountManager.getAccount(accountNumber);
         double previousBalance = account.getBalance();
+        boolean success = transactionManager.deposit(accountNumber, amount);
 
-        transactionManager.deposit(accountNumber, amount);
+        if (!success) {
+            print("Deposit failed. Invalid amount.");
+            pressEnterToContinue();
+            return;
+        }
 
-        System.out.println("\n✓ Deposit successful!");
-        System.out.println("Previous Balance: $" + String.format("%.2f", previousBalance));
-        System.out.println("Deposit Amount: $" + String.format("%.2f", amount));
-        System.out.println("New Balance: $" + String.format("%.2f", account.getBalance()));
+        Transaction transaction = transactionManager.getLastTransaction(accountNumber);
+
+        if (transaction != null) {
+            transaction.displayTransactionDetails(previousBalance);
+        } else {
+            print("Transaction details unavailable.");
+        }
+        print(" ");
+        boolean confirmed = readConfirmation("Confirm transaction?");
+        handleTransactionConfirmation(confirmed, account, previousBalance, transaction != null ? transaction.getTransactionId() : null);
+        pressEnterToContinue();
+
+
     }
 
-    private  void performWithdrawal(String accountNumber) throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException {
-        System.out.print("Enter amount to withdraw: $");
-        double amount = getPositiveAmount();
+
+    public void performWithdrawal(String accountNumber) throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException {
+        double amount = getValidDoubleInput("Enter amount to deposit: $",
+                v -> v > 0,
+                "Amount must be greater than zero.");
 
         Account account = accountManager.getAccount(accountNumber);
         double previousBalance = account.getBalance();
 
         boolean success = transactionManager.withdraw(accountNumber, amount);
 
-        if (success) {
-            System.out.println("\n✓ Withdrawal successful!");
-            System.out.println("Previous Balance: $" + String.format("%.2f", previousBalance));
-            System.out.println("Withdrawal Amount: $" + String.format("%.2f", amount));
-            System.out.println("New Balance: $" + String.format("%.2f", account.getBalance()));
-        } else {
-            System.out.println("\n✗ Withdrawal failed.");
+        if (!success) {
+            if (account instanceof SavingsAccount) {
+                print("Withdrawal failed. Insufficient funds.");
+            } else {
+                print("Withdrawal failed. Insufficient funds or exceeds overdraft limit.");
+            }
+            pressEnterToContinue();
+            return;
         }
+        Transaction transaction = transactionManager.getLastTransaction(accountNumber);
+
+        if (transaction != null) {
+            transaction.displayTransactionDetails(previousBalance);
+        } else {
+            print("Transaction details unavailable.");
+        }
+        print(" ");
+        boolean confirmed = readConfirmation("Confirm transaction?");
+        handleTransactionConfirmation(confirmed, account, previousBalance, transaction != null ? transaction.getTransactionId() : null);
+        pressEnterToContinue();
+
     }
 
-    private  void performTransfer(String fromAccountNumber) throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException {
+    public void performTransfer(String fromAccountNumber) throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException {
         System.out.print("Enter destination account number: ");
         String toAccountNumber = scanner.nextLine().trim();
 
@@ -72,6 +108,18 @@ public class TransactionProcessHandler {
         System.out.println("To Account: " + toAccountNumber + " (Previous: $" + String.format("%.2f", toPreviousBalance) +
                 ", New: $" + String.format("%.2f", toAccount.getBalance()) + ")");
         System.out.println("Transfer Amount: $" + String.format("%.2f", amount));
+    }
+    private void handleTransactionConfirmation(boolean confirmed, Account account, double previousBalance, String transaction) {
+        if (confirmed) {
+            print(" ");
+            print("✓ Transaction completed successfully!");
+        } else {
+            transactionManager.removeTransaction(transaction);
+            account.removeTransactionById(transaction);
+            account.setBalance(previousBalance);
+            print(" ");
+            print("Transaction cancelled.");
+        }
     }
 
 }

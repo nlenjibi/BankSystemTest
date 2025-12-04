@@ -1,27 +1,33 @@
 // Java
 package com.bank.system;
 
+import com.bank.system.processes.AccountProcessHandler;
+import com.bank.system.processes.TransactionProcessHandler;
 import com.bank.system.services.AccountManager;
+import com.bank.system.services.StatementGenerator;
 import com.bank.system.services.TransactionManager;
-import com.bank.system.processes.CreateAccountHandler;
-import com.bank.system.processes.TransactionProcessor;
+
 
 import static com.bank.system.utils.ConsoleFormatter.printHeader;
-import static com.bank.system.utils.ConsoleUtil.getValidIntInput;
-import static com.bank.system.utils.ConsoleUtil.print;
+import static com.bank.system.utils.ConsoleFormatter.printSubSeparator;
+import static com.bank.system.utils.ConsoleUtil.*;
 
 public class Main {
 
-    private final TransactionManager transactionManager;
-    private final AccountManager accountManager;
-    private final CreateAccountHandler accountHandler;
-    private final TransactionProcessor transactionProcessor;
+    private static TransactionManager transactionManager;
+    private static AccountManager accountManager;
+    private static AccountProcessHandler accountprocesshandler;
+    private static  TransactionProcessHandler transactionProcessHandler;
+
+    private final StatementGenerator statementGenerator;
 
     private Main() {
         this.transactionManager = new TransactionManager();
         this.accountManager = new AccountManager();
-        this.accountHandler = new CreateAccountHandler(accountManager, transactionManager);
-        this.transactionProcessor = new TransactionProcessor(accountManager, transactionManager);
+        this.accountprocesshandler = new AccountProcessHandler(accountManager, transactionManager);
+        this.transactionProcessHandler = new TransactionProcessHandler(accountManager, transactionManager);
+
+        this.statementGenerator = new StatementGenerator(accountManager, transactionManager);
     }
 
     public static void main(String[] args) {
@@ -30,7 +36,7 @@ public class Main {
 
     private void run() {
         displayWelcomeMessage();
-        accountHandler.initializeSampleData();
+        accountprocesshandler.initializeSampleData();
         boolean running = true;
         while (running) {
             displayMainMenu();
@@ -43,19 +49,19 @@ public class Main {
     private boolean processMenuChoice(int choice) {
         return switch (choice) {
             case 1 -> {
-                accountHandler.createAccount();
+                manageAccounts();
                 yield true;
             }
             case 2 -> {
-                accountHandler.viewAccounts();
+                performTransactions();
                 yield true;
             }
             case 3 -> {
-                transactionProcessor.processTransaction();
+                generateAccountStatements();
                 yield true;
             }
             case 4 -> {
-                transactionProcessor.viewTransactionHistory();
+                runTests();
                 yield true;
             }
             case 5 -> false;
@@ -72,16 +78,50 @@ public class Main {
         int choice = getValidIntInput("Enter your choice: ", 1, 3);
 
         switch (choice) {
-            case 1-> createAccount();
+            case 1-> accountprocesshandler.createAccount();
 
-            case 2 -> viewAccountDetails();
+            case 2 -> accountprocesshandler.viewAccountDetails();
 
-            case 3 -> listAllAccounts();
+            case 3 -> accountprocesshandler.listAllAccounts();
 
         }
     }
 
+    private static void performTransactions() {
+        print(" ");
+        print("PROCESS TRANSACTION");
+        printSubSeparator(60);
+        print(" ");
 
+        String accountNumber = readString("Enter Account Number: ",
+                s -> !s.isEmpty(),
+                "Account Number cannot be empty."
+        );
+
+        if (!accountManager.accountExists(accountNumber)) {
+            print("Error: Account not found. Please check the account number and try again.");
+            pressEnterToContinue();
+            return;
+        }
+
+        print("Select transaction type:");
+        print("1. Deposit");
+        print("2. Withdrawal");
+        print("3. Transfer");
+
+        int transactionType =  getValidIntInput("Choose an option:  ", 1, 3);
+
+        try {
+            switch (transactionType) {
+                case 1-> transactionProcessHandler.performDeposit(accountNumber);
+                case 2 -> transactionProcessHandler.performWithdrawal(accountNumber);
+                case 3 -> transactionProcessHandler.performTransfer(accountNumber);
+                default -> throw new IllegalArgumentException("Invalid transaction type");
+            }
+        } catch (Exception e) {
+            System.out.println("Transaction Failed: " + e.getMessage());
+        }
+    }
     private static void generateAccountStatements() {
         System.out.println("\nGENERATE ACCOUNT STATEMENT");
         System.out.print("Enter Account Number: ");
