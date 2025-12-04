@@ -2,12 +2,11 @@ package com.bank.system.model;
 
 import static com.bank.system.utils.ConsoleUtil.printf;
 public class SavingsAccount extends Account  {
-    private final double interestRate;
-    private final double minimumBalance;
+    private static final double INTEREST_RATE = 3.5;
+    private static final double MINIMUM_BALANCE = 500.0;
     public SavingsAccount(Customer customer, double initialBalance) {
         super(customer, initialBalance);
-        this.interestRate = 3.5; // 3.5% annually
-        this.minimumBalance = 500.0; // $50 minimum balance
+
     }
 
     @Override
@@ -20,8 +19,8 @@ public class SavingsAccount extends Account  {
                 getStatus());
         printf("%-8s | Interest Rate: %.1f%% | Min Balance: $%,.2f%n",
                 "",
-                interestRate,
-                minimumBalance);
+                INTEREST_RATE,
+                MINIMUM_BALANCE);
     }
 
     @Override
@@ -36,7 +35,7 @@ public class SavingsAccount extends Account  {
         }
 
         // Check if withdrawal would bring balance below minimum
-        if (getBalance() - amount < minimumBalance) {
+        if (getBalance() - amount < MINIMUM_BALANCE) {
             return false;
         }
 
@@ -44,18 +43,34 @@ public class SavingsAccount extends Account  {
         return true;
     }
 
-    // Method to calculate interest
-    public double calculateInterest() {
-        return getBalance() * (interestRate / 100);
-    }
 
     // Getters
     public double getInterestRate() {
-        return interestRate;
+        return INTEREST_RATE;
     }
 
     public double getMinimumBalance() {
-        return minimumBalance;
+        return MINIMUM_BALANCE;
+    }
+    @Override
+    public boolean deposit(double amount) {
+        if (amount <= 0) {
+            return false;
+        }
+
+        setBalance(getBalance() + amount);
+        return true;
+    }
+    @Override
+    public boolean processTransaction(double amount, String type) {
+        if (type.equalsIgnoreCase("DEPOSIT")) {
+
+            return deposit(amount);
+
+        } else if (type.equalsIgnoreCase("WITHDRAWAL")) {
+            return withdraw(amount);
+        }
+        return false;
     }
 
 }

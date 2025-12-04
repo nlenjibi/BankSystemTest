@@ -3,14 +3,13 @@ package com.bank.system.model;
 import static com.bank.system.utils.ConsoleUtil.printf;
 
 public class CheckingAccount extends Account {
-    private final double overdraftLimit;
-    private final double monthlyFee;
+    private static final double OVERDRAFT_LIMIT = 500.0;
+    private static final double MONTHLY_FEE = 10.0 ;
 
 
     public CheckingAccount(Customer customer, double initialBalance) {
         super(customer, initialBalance);
-        this.overdraftLimit = 1000.0; // $1000 overdraft limit
-        this.monthlyFee = 10.0; // $10 monthly fee
+
     }
 
     @Override
@@ -23,8 +22,8 @@ public class CheckingAccount extends Account {
                 getStatus());
         printf("%-8s | Overdraft Limit: $%.2f | Monthly Fee: $%,.2f%n",
                 "",
-                overdraftLimit,
-                monthlyFee);
+                OVERDRAFT_LIMIT,
+                MONTHLY_FEE);
     }
 
 
@@ -40,35 +39,41 @@ public class CheckingAccount extends Account {
         }
 
         // Check if withdrawal is within balance + overdraft limit
-        if (getBalance() + overdraftLimit < amount) {
+        if (getBalance() + OVERDRAFT_LIMIT < amount) {
             return false;
         }
 
         setBalance(getBalance() - amount);
         return true;
     }
-
-    // Method to apply monthly fee
-    public void applyMonthlyFee() {
-        // Check if customer is premium - they have waived fees
-        if (getCustomer() instanceof PremiumCustomer) {
-            // Premium customers have waived fees
-            return;
+    @Override
+    public boolean deposit(double amount) {
+        if (amount <= 0) {
+            return false;
         }
-
-        // Apply monthly fee only if balance is sufficient
-        if (getBalance() >= monthlyFee) {
-            setBalance(getBalance() - monthlyFee);
-        }
+        setBalance(getBalance() + amount);
+        return true;
     }
 
     // Getters
     public double getOverdraftLimit() {
-        return overdraftLimit;
+        return OVERDRAFT_LIMIT;
     }
 
     public double getMonthlyFee() {
-        return monthlyFee;
+        return MONTHLY_FEE;
+    }
+
+    @Override
+    public boolean processTransaction(double amount, String type) {
+        if (type.equalsIgnoreCase("DEPOSIT")) {
+
+            return deposit(amount);
+
+        } else if (type.equalsIgnoreCase("WITHDRAWAL")) {
+            return withdraw(amount);
+        }
+        return false;
     }
 
 }
