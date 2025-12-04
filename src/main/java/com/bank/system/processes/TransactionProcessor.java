@@ -1,9 +1,9 @@
 package com.bank.system.processes;
 
 
-import com.bank.system.manager.AccountManager;
-import com.bank.system.manager.TransactionManager;
-import com.bank.system.model.*;
+import com.bank.system.services.AccountManager;
+import com.bank.system.services.TransactionManager;
+import com.bank.system.models.*;
 
 import static com.bank.system.utils.ConsoleFormatter.*;
 import static com.bank.system.utils.ConsoleUtil.*;
@@ -29,7 +29,7 @@ public class TransactionProcessor {
                 "Account Number cannot be empty."
         );
 
-        Account account = accountManager.findAccount(accountNumber);
+        Account account = accountManager.getAccount(accountNumber);
         if (account == null) {
             print("Account not found.");
             pressEnterToContinue();
@@ -114,7 +114,7 @@ public class TransactionProcessor {
         print(" ");
 
         String accountNumber = readString("Enter Account Number: ", s -> !s.isEmpty(), "Account Number cannot be empty.");
-        Account account = accountManager.findAccount(accountNumber);
+        Account account = accountManager.getAccount(accountNumber);
         transactionManager.viewTransactionsByAccount(accountNumber, account);
     }
 

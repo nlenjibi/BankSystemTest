@@ -1,4 +1,4 @@
-package com.bank.system.model;
+package com.bank.system.models;
 
 import com.bank.system.interfaces.CustomerService;
 

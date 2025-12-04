@@ -1,4 +1,4 @@
-package com.bank.system.model;
+package com.bank.system.models;
 
 public class PremiumCustomer extends Customer {
     private  final double minimumBalance;

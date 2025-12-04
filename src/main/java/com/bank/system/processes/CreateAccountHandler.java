@@ -1,8 +1,8 @@
 package com.bank.system.processes;
 
-import com.bank.system.manager.*;
-import com.bank.system.model.*;
-import com.bank.system.model.Transaction;
+import com.bank.system.services.*;
+import com.bank.system.models.*;
+import com.bank.system.models.Transaction;
 
 import static com.bank.system.utils.ConsoleUtil.*;
 

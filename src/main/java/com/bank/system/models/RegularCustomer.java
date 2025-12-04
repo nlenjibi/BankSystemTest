@@ -1,5 +1,5 @@
-package com.bank.system.model;
-import static com.bank.system.utils.ConsoleUtil.*;
+package com.bank.system.models;
+
 public class RegularCustomer extends Customer {
     private static final double INTEREST_RATE = 0.035; // 3.5% annual interest
     public RegularCustomer(String name, int age, String contact, String address) {

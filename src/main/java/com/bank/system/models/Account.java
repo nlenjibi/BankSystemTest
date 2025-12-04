@@ -1,9 +1,11 @@
-package com.bank.system.model;
+package com.bank.system.models;
 import com.bank.system.exceptions.InsufficientFundsException;
 import com.bank.system.exceptions.InvalidAmountException;
 import com.bank.system.exceptions.OverdraftExceededException;
 import com.bank.system.interfaces.Transactable;
 
+import java.util.ArrayList;
+import java.util.List;
 
 
 public abstract class Account implements Transactable {
@@ -11,6 +13,7 @@ public abstract class Account implements Transactable {
     private final Customer customer;
     private double balance;
     private final String status;
+    protected List<Transaction> transactions;
     private static int accountCounter = 0;
 
      protected Account(Customer customer, double initialDeposit) {
@@ -18,6 +21,7 @@ public abstract class Account implements Transactable {
         this.balance = initialDeposit;
         this.status = "Active";
         this.accountNumber = generateAccountNumber();
+        this.transactions = new ArrayList<>();
     }
 
     private static String generateAccountNumber() {
@@ -47,7 +51,13 @@ public abstract class Account implements Transactable {
         return customer;
     }
 
+    public List<Transaction> getTransactions() {
+        return new ArrayList<>(transactions);
+    }
 
+    public void addTransaction(Transaction transaction) {
+        this.transactions.add(transaction);
+    }
 
     public double getBalance() {
         return balance;

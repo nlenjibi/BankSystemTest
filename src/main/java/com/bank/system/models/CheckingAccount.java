@@ -1,10 +1,13 @@
-package com.bank.system.model;
+package com.bank.system.models;
 
 import static com.bank.system.utils.ConsoleUtil.printf;
-public class SavingsAccount extends Account  {
-    private static final double INTEREST_RATE = 3.5;
-    private static final double MINIMUM_BALANCE = 500.0;
-    public SavingsAccount(Customer customer, double initialBalance) {
+
+public class CheckingAccount extends Account {
+    private static final double OVERDRAFT_LIMIT = 500.0;
+    private static final double MONTHLY_FEE = 10.0 ;
+
+
+    public CheckingAccount(Customer customer, double initialBalance) {
         super(customer, initialBalance);
 
     }
@@ -17,15 +20,16 @@ public class SavingsAccount extends Account  {
                 getAccountType(),
                 getBalance(),
                 getStatus());
-        printf("%-8s | Interest Rate: %.1f%% | Min Balance: $%,.2f%n",
+        printf("%-8s | Overdraft Limit: $%.2f | Monthly Fee: $%,.2f%n",
                 "",
-                INTEREST_RATE,
-                MINIMUM_BALANCE);
+                OVERDRAFT_LIMIT,
+                MONTHLY_FEE);
     }
+
 
     @Override
     public String getAccountType() {
-        return "Savings";
+        return "Checking";
     }
 
     @Override
@@ -34,33 +38,32 @@ public class SavingsAccount extends Account  {
             return false;
         }
 
-        // Check if withdrawal would bring balance below minimum
-        if (getBalance() - amount < MINIMUM_BALANCE) {
+        // Check if withdrawal is within balance + overdraft limit
+        if (getBalance() + OVERDRAFT_LIMIT < amount) {
             return false;
         }
 
         setBalance(getBalance() - amount);
         return true;
     }
-
-
-    // Getters
-    public double getInterestRate() {
-        return INTEREST_RATE;
-    }
-
-    public double getMinimumBalance() {
-        return MINIMUM_BALANCE;
-    }
     @Override
     public boolean deposit(double amount) {
         if (amount <= 0) {
             return false;
         }
-
         setBalance(getBalance() + amount);
         return true;
     }
+
+    // Getters
+    public double getOverdraftLimit() {
+        return OVERDRAFT_LIMIT;
+    }
+
+    public double getMonthlyFee() {
+        return MONTHLY_FEE;
+    }
+
     @Override
     public boolean processTransaction(double amount, String type) {
         if (type.equalsIgnoreCase("DEPOSIT")) {
