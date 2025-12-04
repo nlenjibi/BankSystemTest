@@ -1,4 +1,4 @@
-package com.bank.system.model;
+package com.bank.system.models;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -79,7 +79,5 @@ public class Transaction {
         return transactionCounter;
     }
 
-    public static void resetTransactionCounter() {
-        transactionCounter = 0;
-    }
+
 }

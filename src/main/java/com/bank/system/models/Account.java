@@ -1,23 +1,30 @@
-package com.bank.system.model;
+package com.bank.system.models;
+import com.bank.system.exceptions.InsufficientFundsException;
+import com.bank.system.exceptions.InvalidAmountException;
+import com.bank.system.exceptions.OverdraftExceededException;
 import com.bank.system.interfaces.Transactable;
 
+import java.util.ArrayList;
+import java.util.List;
 
 
 public abstract class Account implements Transactable {
     private final String accountNumber;
-    private Customer customer;
+    private final Customer customer;
     private double balance;
-    private String status;
+    private final String status;
+    protected List<Transaction> transactions;
     private static int accountCounter = 0;
 
-     public Account(Customer customer, double initialDeposit) {
+     protected Account(Customer customer, double initialDeposit) {
         this.customer = customer;
         this.balance = initialDeposit;
         this.status = "Active";
         this.accountNumber = generateAccountNumber();
+        this.transactions = new ArrayList<>();
     }
 
-    private String generateAccountNumber() {
+    private static String generateAccountNumber() {
         accountCounter++;
         return String.format("ACC%03d", accountCounter);
     }
@@ -28,18 +35,12 @@ public abstract class Account implements Transactable {
     public abstract String getAccountType();
 
     // Deposit method - common for all account types
-    public boolean deposit(double amount) {
 
-        if (amount > 0) {
-            this.balance += amount;
-            return true;
-        }
-        return false;
-    }
-
+    // Abstract methods to be implemented by subclasses
+    public abstract boolean withdraw(double amount) throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException;
+    public abstract boolean deposit(double amount) throws InvalidAmountException;
 
     // Withdraw method - to be overridden by subclasses
-    public abstract boolean withdraw(double amount);
 
     // Getters and setters
     public String getAccountNumber() {
@@ -50,8 +51,12 @@ public abstract class Account implements Transactable {
         return customer;
     }
 
-    public void setCustomer(Customer customer) {
-        this.customer = customer;
+    public List<Transaction> getTransactions() {
+        return new ArrayList<>(transactions);
+    }
+
+    public void addTransaction(Transaction transaction) {
+        this.transactions.add(transaction);
     }
 
     public double getBalance() {
@@ -66,29 +71,8 @@ public abstract class Account implements Transactable {
         return status;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
 
-    public static int getAccountCounter() {
-        return accountCounter;
-    }
 
-    public static void resetAccountCounter() {
-        accountCounter = 0;
-    }
-    @Override
-    public boolean processTransaction(double amount, String type) {
-
-        if (type.equalsIgnoreCase("DEPOSIT")) {
-
-            return deposit(amount);
-
-        } else if (type.equalsIgnoreCase("WITHDRAWAL")) {
-            return withdraw(amount);
-        }
-        return false;
-    }
 
 
 }

@@ -1,8 +1,8 @@
 // Java
 package com.bank.system;
 
-import com.bank.system.manager.AccountManager;
-import com.bank.system.manager.TransactionManager;
+import com.bank.system.services.AccountManager;
+import com.bank.system.services.TransactionManager;
 import com.bank.system.processes.CreateAccountHandler;
 import com.bank.system.processes.TransactionProcessor;
 
