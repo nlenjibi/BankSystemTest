@@ -34,65 +34,7 @@ public class TransactionManager {
     }
 
 
-    // Method to view transactions by account
-   public void viewTransactionsByAccount(String accountNumber, Account account) {
-       print(" ");
-       print("TRANSACTION HISTORY FOR ACCOUNT: " + account.getAccountNumber() + " - " + account.getCustomer().getName());
-       printSeparator();
-       print(" ");
-       print("Account :" + account.getAccountNumber() + " - " + account.getCustomer().getName() );
-       print("Account Type: " + account.getAccountType());
-       printf("Current Balance: $%,.2f%n", account.getBalance());
-       print("");
-       boolean hasTransactions = false;
 
-       List<Transaction> transactions = getTransactionsForAccount(accountNumber);
-       if (transactions == null || transactions.isEmpty()) {
-           printSeparator();
-           print("No transactions found for this account.");
-           printSeparator();
-           pressEnterToContinue();
-           return;
-       }
-
-       // Display transactions in reverse chronological order (newest first)
-       for (int i = transactions.size() - 1; i >= 0; i--) {
-           Transaction t = transactions.get(i);
-           if (t == null) continue;
-
-           if (!hasTransactions) {
-               print("TRANSACTION HISTORY");
-               printSubSeparator(85);
-
-               printf("%-12s | %-20s | %-10s | %-14s | %-15s%n",
-                       "TXN ID", "DATE/TIME", "TYPE", "AMOUNT", "BALANCE AFTER");
-               hasTransactions = true;
-               printSubSeparator(85);
-           }
-
-           double amount = t.getAmount();
-           String sign = "WITHDRAWAL".equalsIgnoreCase(t.getType()) ? "-" : "+";
-           printf("%-12s | %-20s | %-10s | %s$%,12.2f | $%,15.2f%n",
-                   t.getTransactionId(),
-                   t.getTimestamp(),
-                   t.getType(),
-                   sign,
-                   amount,
-                   t.getBalanceAfter());
-       }
-
-       printSubSeparator(85);
-       // Display summary
-       print(" ");
-       print("SUMMARY:");
-       print("Total Transactions: " + transactions.size());
-       printf("Total Deposits: $%,.2f%n", totalDeposits(accountNumber));
-       printf("Total Withdrawals: $%,.2f%n", totalWithdrawals(accountNumber));
-       printf("Net Change: +$%,.2f%n",
-               totalDeposits(accountNumber) - totalWithdrawals(accountNumber));
-
-       pressEnterToContinue();
-   }
 
 
     // Method to calculate total withdrawals for an account
