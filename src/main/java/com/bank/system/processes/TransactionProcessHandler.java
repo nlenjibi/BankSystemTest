@@ -50,7 +50,7 @@ public class TransactionProcessHandler {
 
 
     public void performWithdrawal(String accountNumber) throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException {
-        double amount = getValidDoubleInput("Enter amount to deposit: $",
+        double amount = getValidDoubleInput("Enter amount to withdraw: $",
                 v -> v > 0,
                 "Amount must be greater than zero.");
 
@@ -83,16 +83,21 @@ public class TransactionProcessHandler {
     }
 
     public void performTransfer(String fromAccountNumber) throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException {
-        System.out.print("Enter destination account number: ");
-        String toAccountNumber = scanner.nextLine().trim();
+        String toAccountNumber = readString("Enter destination account number: ",
+                s -> !s.isEmpty(),
+                "Account Number cannot be empty."
+        );
 
         if (!accountManager.accountExists(toAccountNumber)) {
-            System.out.println("Error: Destination account not found.");
+            print("Error: Destination account not found. Please check the account number and try again.");
+            pressEnterToContinue();
             return;
         }
 
-        System.out.print("Enter amount to transfer: $");
-        double amount = getPositiveAmount();
+        double amount = getValidDoubleInput("Enter amount to transfer: $",
+                v -> v > 0,
+                "Amount must be greater than zero.");
+
 
         Account fromAccount = accountManager.getAccount(fromAccountNumber);
         Account toAccount = accountManager.getAccount(toAccountNumber);
@@ -101,13 +106,35 @@ public class TransactionProcessHandler {
         double toPreviousBalance = toAccount.getBalance();
 
         transactionManager.transfer(fromAccountNumber, toAccountNumber, amount);
+        Transaction fromTransaction = transactionManager.getLastTransaction(fromAccountNumber);
+        Transaction toTransaction = transactionManager.getLastTransaction(toAccountNumber);
 
-        System.out.println("\n✓ Transfer successful!");
-        System.out.println("From Account: " + fromAccountNumber + " (Previous: $" + String.format("%.2f", fromPreviousBalance) +
-                ", New: $" + String.format("%.2f", fromAccount.getBalance()) + ")");
-        System.out.println("To Account: " + toAccountNumber + " (Previous: $" + String.format("%.2f", toPreviousBalance) +
-                ", New: $" + String.format("%.2f", toAccount.getBalance()) + ")");
-        System.out.println("Transfer Amount: $" + String.format("%.2f", amount));
+        if (fromTransaction != null) {
+            fromTransaction.displayTransactionDetails(fromPreviousBalance);
+        } else {
+            print("Transaction details unavailable.");
+        }
+        print(" ");
+        boolean confirmed = readConfirmation("Confirm transaction?");
+        if (confirmed) {
+            System.out.println("\n✓ Transfer successful!");
+            System.out.println("From Account: " + fromAccountNumber + " (Previous: $" + String.format("%.2f", fromPreviousBalance) +
+                    ", New: $" + String.format("%.2f", fromAccount.getBalance()) + ")");
+            System.out.println("To Account: " + toAccountNumber + " (Previous: $" + String.format("%.2f", toPreviousBalance) +
+                    ", New: $" + String.format("%.2f", toAccount.getBalance()) + ")");
+            System.out.println("Transfer Amount: $" + String.format("%.2f", amount));
+        }
+        else {
+            transactionManager.removeTransaction(fromTransaction != null ? fromTransaction.getTransactionId() : null);
+            transactionManager.removeTransaction(toTransaction != null ? toTransaction.getTransactionId() : null);
+            fromAccount.removeTransactionById(fromTransaction != null ? fromTransaction.getTransactionId() : null);
+            toAccount.removeTransactionById(toTransaction != null ? toTransaction.getTransactionId() : null);
+            fromAccount.setBalance(fromPreviousBalance);
+            toAccount.setBalance(toPreviousBalance);
+            print(" ");
+            print("Transaction cancelled.");
+
+        }
     }
     private void handleTransactionConfirmation(boolean confirmed, Account account, double previousBalance, String transaction) {
         if (confirmed) {
