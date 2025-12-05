@@ -76,4 +76,7 @@ public class CheckingAccount extends Account {
         return false;
     }
 
+    public double getMaxWithdrawalAmount() {
+        return getBalance() + OVERDRAFT_LIMIT;
+    }
 }

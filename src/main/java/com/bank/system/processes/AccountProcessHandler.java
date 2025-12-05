@@ -7,107 +7,148 @@ import com.bank.system.models.Transaction;
 
 import static com.bank.system.utils.ConsoleUtil.*;
 public class AccountProcessHandler {
-    private final TransactionManager transactionManager;
-    private final AccountManager accountManager;
+    private static TransactionManager transactionManager;
+    private static  AccountManager accountManager;
 
     public AccountProcessHandler(AccountManager accountManager, TransactionManager transactionManager) {
         this.transactionManager = transactionManager;
         this.accountManager = accountManager;
     }
+    private record CustomerData(String name, int age, String contact, String address) {}
+
     public static void createAccount() {
-        System.out.println("\nCREATE ACCOUNT");
-        System.out.print("Enter customer name: ");
-        String name = scanner.nextLine().trim();
+        print(" ");
+        print("ACCOUNT CREATION");
+        print(" ");
 
-        System.out.print("Enter customer ID: ");
-        String customerId = scanner.nextLine().trim();
+        CustomerData data = readCustomerDetails();
+        Customer customer = createCustomerFromData(data);
+        print(" ");
+        print("Account type:");
+        boolean isRegular = "Regular".equals(customer.getCustomerType());
+        double savingsMin = isRegular ? 500 : 10000;
+        print("1. Savings Account (Interest: 3.5% Min Balance: $" + String.format("%,.0f", savingsMin) + ")");
+        print("2. Checking Account (Overdraft: $1,000, Monthly Fee: $10)");
+        int accountType = getValidIntInput("Select type (1-2): ", 1, 2);
+        double initialDeposit = getValidDoubleInput(
+                "Enter initial deposit amount: $",
+                v -> v >= savingsMin,
+                "Value must be greater than or equal to $" + String.format("%,.0f", savingsMin) + "."
+        );
 
-        System.out.println("Select account type:");
-        System.out.println("1. Savings Account");
-        System.out.println("2. Checking Account");
-        System.out.print("Choose an option: ");
-
-        int accountType = getChoice(1, 2);
-
-        System.out.println("Select customer type:");
-        System.out.println("1. Regular Customer");
-        System.out.println("2. Premium Customer");
-        System.out.print("Choose an option: ");
-
-        int customerType = getChoice(1, 2);
-
-        System.out.print("Enter initial deposit amount: $");
-        double initialAmount = getPositiveAmount();
-
-        Customer customer;
-        if (customerType == 1) {
-            customer = new RegularCustomer(name, customerId);
-        } else {
-            customer = new PremiumCustomer(name, customerId);
-        }
-
-        String accountNumber = accountManager.generateAccountNumber();
-        Account account;
-
-        if (accountType == 1) {
-            account = new SavingsAccount(accountNumber, initialAmount, customer);
-        } else {
-            account = new CheckingAccount(accountNumber, initialAmount, customer);
-        }
+        Account account = (accountType == 2)
+                ? new CheckingAccount(customer, initialDeposit)
+                : new SavingsAccount(customer, initialDeposit);
 
         if (accountManager.addAccount(account)) {
-            System.out.println("\n✓ Account created successfully!");
-            System.out.println("Account Number: " + accountNumber);
-            System.out.println("Account Type: " + account.getClass().getSimpleName());
-            System.out.println("Customer: " + customer.getName());
-            System.out.println("Initial Balance: $" + String.format("%.2f", initialAmount));
+            Transaction transaction = new Transaction(
+                    account.getAccountNumber(),
+                    account.getAccountType(),
+                    initialDeposit,
+                    account.getBalance()
+            );
+
+            transactionManager.addTransaction(transaction);
+            displayAccountCreatedInfo(account, customer);
         } else {
-            System.out.println("\n✗ Failed to create account. Account number may already exist.");
+            print("Failed to create account. Maximum account limit reached.");
+        }
+        print(" ");
+        pressEnterToContinue();
+    }
+    private static CustomerData readCustomerDetails() {
+        String name = readString("Enter Customer Name: ",
+                s -> s != null && !s.trim().isEmpty() && !s.matches(".*\\d.*"),
+                "Name cannot be empty and cannot contain digits.");
+
+        int age = getValidIntInput("Enter customer age: ", 1, 150);
+
+        String contact = readString("Enter customer contact: ",
+                s -> s != null && !s.trim().isEmpty() && !s.matches(".*[A-Za-z].*"),
+                "Contact cannot be empty and cannot contain letters.");
+
+        String address = readString("Enter customer address: ",
+                s -> s != null && !s.trim().isEmpty(),
+                "Address cannot be empty.");
+
+        return new CustomerData(name, age, contact, address);
+    }
+
+    private static void displayAccountCreatedInfo(Account account, Customer customer) {
+        print(" ");
+        print("✓ Account created successfully!");
+        print("Account Number: " + account.getAccountNumber());
+        print("Customer: " + customer.getName() + " (" + customer.getCustomerType() + ")");
+        print("Account Type: " + account.getAccountType());
+        printf("Initial Balance: $%.2f%n", account.getBalance());
+
+        if (account instanceof SavingsAccount savings) {
+            printf("Interest Rate: %.1f%%%n", savings.getInterestRate());
+            printf("Minimum Balance: $%,.2f%n", savings.getMinimumBalance());
+        } else if (account instanceof CheckingAccount checking) {
+            printf("Overdraft Limit: $%,.2f%n", checking.getOverdraftLimit());
+            if (customer instanceof PremiumCustomer) {
+                print("Monthly Fee: Waived (Premium Customer)");
+            } else {
+                printf("Monthly Fee: $%,.2f%n", checking.getMonthlyFee());
+            }
+        }
+        print("Status: " + account.getStatus());
+    }
+
+    private static Customer createCustomerFromData(CustomerData data) {
+
+        print(" ");
+        print("Customer type:");
+        print("1. Regular Customer (Standard banking services)");
+        print("2. Premium Customer (Enhanced benefits, min balance $10,000)");
+
+        int customerType = getValidIntInput("Select type (1-2): ", 1, 2);
+
+        if (customerType == 2) {
+            return new PremiumCustomer(data.name, data.age, data.contact, data.address);
+        } else {
+            return new RegularCustomer(data.name, data.age, data.contact, data.address);
         }
     }
 
     public static void viewAccountDetails() {
-        System.out.println("\nVIEW ACCOUNT DETAILS");
-        System.out.print("Enter Account Number: ");
-        String accountNumber = scanner.nextLine().trim();
+        print("\nVIEW ACCOUNT DETAILS");
+        String accountNumber = readString("Enter Account Number: ",
+                s -> !s.isEmpty(),
+                "Account Number cannot be empty."
+        );
+
+        if (!accountManager.accountExists(accountNumber)) {
+            print("Error: Account not found. Please check the account number and try again.");
+            pressEnterToContinue();
+            return;
+        }
 
         Account account = accountManager.getAccount(accountNumber);
         if (account != null) {
-            System.out.println("\nAccount Details:");
-            System.out.println("Account Number: " + account.getAccountNumber());
-            System.out.println("Account Type: " + account.getClass().getSimpleName());
-            System.out.println("Customer: " + account.getCustomer().getName());
-            System.out.println("Customer Type: " + account.getCustomer().getClass().getSimpleName());
-            System.out.println("Current Balance: $" + String.format("%.2f", account.getBalance()));
+            print("\nAccount Details:");
+            print("Account Number: " + account.getAccountNumber());
+            print("Account Type: " + account.getClass().getSimpleName());
+            print("Customer: " + account.getCustomer().getName());
+            print("Customer Type: " + account.getCustomer().getClass().getSimpleName());
+            print("Current Balance: $" + String.format("%.2f", account.getBalance()));
 
             if (account instanceof SavingsAccount) {
                 SavingsAccount savings = (SavingsAccount) account;
-                System.out.println("Minimum Balance: $" + String.format("%.2f", savings.getMinimumBalance()));
+                print("Minimum Balance: $" + String.format("%.2f", savings.getMinimumBalance()));
             } else if (account instanceof CheckingAccount) {
                 CheckingAccount checking = (CheckingAccount) account;
-                System.out.println("Overdraft Limit: $" + String.format("%.2f", checking.getOverdraftLimit()));
-                System.out.println("Max Withdrawal Amount: $" + String.format("%.2f", checking.getMaxWithdrawalAmount()));
+                print("Overdraft Limit: $" + String.format("%.2f", checking.getOverdraftLimit()));
+                print("Max Withdrawal Amount: $" + String.format("%.2f", checking.getMaxWithdrawalAmount()));
             }
         } else {
-            System.out.println("\nError: Account not found. Please check the account number and try again.");
+            print("\nError: Account not found. Please check the account number and try again.");
         }
     }
 
     public static void listAllAccounts() {
-        System.out.println("\nLIST ALL ACCOUNTS");
-        if (accountManager.getTotalAccounts() == 0) {
-            System.out.println("No accounts found.");
-            return;
-        }
-
-        System.out.println("Total Accounts: " + accountManager.getTotalAccounts());
-        System.out.println("\nAccount List:");
-        for (Account account : accountManager.getAllAccounts().values()) {
-            System.out.printf("  %s - %s - Balance: $%.2f%n",
-                    account.getAccountNumber(),
-                    account.getCustomer().getName(),
-                    account.getBalance());
-        }
+       accountManager.viewAllAccounts();
     }
     public void initializeSampleData() {
         Customer customer1 = new RegularCustomer("John Smith", 35, "+1-555-0101", "456 Elm Street, Metropolis");

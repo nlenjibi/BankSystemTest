@@ -117,12 +117,12 @@ public class TransactionProcessHandler {
         print(" ");
         boolean confirmed = readConfirmation("Confirm transaction?");
         if (confirmed) {
-            System.out.println("\n✓ Transfer successful!");
-            System.out.println("From Account: " + fromAccountNumber + " (Previous: $" + String.format("%.2f", fromPreviousBalance) +
+            print("\n✓ Transfer successful!");
+            print("From Account: " + fromAccountNumber + " (Previous: $" + String.format("%.2f", fromPreviousBalance) +
                     ", New: $" + String.format("%.2f", fromAccount.getBalance()) + ")");
-            System.out.println("To Account: " + toAccountNumber + " (Previous: $" + String.format("%.2f", toPreviousBalance) +
+            print("To Account: " + toAccountNumber + " (Previous: $" + String.format("%.2f", toPreviousBalance) +
                     ", New: $" + String.format("%.2f", toAccount.getBalance()) + ")");
-            System.out.println("Transfer Amount: $" + String.format("%.2f", amount));
+            print("Transfer Amount: $" + String.format("%.2f", amount));
         }
         else {
             transactionManager.removeTransaction(fromTransaction != null ? fromTransaction.getTransactionId() : null);

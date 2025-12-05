@@ -10,13 +10,13 @@ public class ConsoleUtil {
         // Read a full line
     public static String readString(String prompt, Predicate<String> validator, String errorMessage) {
         while (true) {
-            System.out.print(prompt);
+            pr(prompt);
             String input = scanner.nextLine().trim();
 
             if (validator.test(input)) {
                 return input;
             }
-            System.out.println(errorMessage);
+            print(errorMessage);
         }
     }
 
@@ -24,10 +24,10 @@ public class ConsoleUtil {
 
     public static int getValidIntInput(String prompt, int min, int max) {
         while (true) {
-            System.out.print(prompt);
+            pr(prompt);
             String input = scanner.nextLine().trim();
             if (input.isEmpty()) {
-                System.out.println("Input cannot be empty. Please try again.");
+                print("Input cannot be empty. Please try again.");
                 continue;
             }
             try {
@@ -36,19 +36,19 @@ public class ConsoleUtil {
                 if (value >= min && value <= max) {
                     return value;
                 }
-                System.out.printf("Please enter a number between %d and %d.%n", min, max);
+                printf("Please enter a number between %d and %d.%n", min, max);
             } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a valid number: ");
+                print("Invalid input. Please enter a valid number: ");
             }
         }
     }
     public static double getValidDoubleInput(String prompt, Predicate<Double> validator, String errorMessage) {
         while (true) {
-            System.out.print(prompt);
+            pr(prompt);
             String input = scanner.nextLine().trim();
 
             if (input.isEmpty()) {
-                System.out.println("Input cannot be empty. Please try again.");
+                print("Input cannot be empty. Please try again.");
                 continue;
             }
             try {
@@ -59,9 +59,9 @@ public class ConsoleUtil {
 
                     return value;
                 }
-                System.out.println(errorMessage);
+                print(errorMessage);
             } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a valid number: $");
+                print("Invalid input. Please enter a valid number: $");
             }
         }
     }
@@ -84,33 +84,33 @@ public class ConsoleUtil {
 
     // Pause the console
     public static void pressEnterToContinue() {
-        System.out.println("\nPress Enter to continue…");
+        IO.println("\nPress Enter to continue…");
         scanner.nextLine();
     }
     public static void print(Object text) {
-        System.out.println(text);
+        IO.println(text);
     }
     public static void printf(String format, Object ... args) {
         System.out.printf(format, args);
     }
     // a custom print method to displace text to the console
     public static void pr(Object text) {
-        System.out.print(text);
+        IO.print(text);
     }
     public void clearScreen(){
-        System.out.print("\033[H\033[2J");
+        print("\033[H\033[2J");
         System.out.flush();
     }
     public static void waitForEnter(String message) {
-        System.out.print(message);
+        pr(message);
         scanner.nextLine();
     }
     public static void formatCurrency(String label, double amount) {
-        System.out.printf("%s: $%.2f%n", label, amount);
+        printf("%s: $%.2f%n", label, amount);
     }
     public static boolean readConfirmation(String prompt) {
         while (true) {
-            System.out.print(prompt + " (Y/N): ");
+            pr(prompt + " (Y/N): ");
             String input = scanner.nextLine().trim().toUpperCase();
 
             if (input.equals("Y") || input.equals("YES")) {
@@ -118,11 +118,11 @@ public class ConsoleUtil {
             } else if (input.equals("N") || input.equals("NO")) {
                 return false;
             }
-            System.out.println("Please enter Y for Yes or N for No.");
+            print("Please enter Y for Yes or N for No.");
         }
     }
 
     public static void printKeyValue(String key, String value) {
-        System.out.printf("%-20s: %s%n", key, value);
+        printf("%-20s: %s%n", key, value);
     }
 }

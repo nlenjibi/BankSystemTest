@@ -19,7 +19,7 @@ public class Main {
     private static AccountProcessHandler accountprocesshandler;
     private static  TransactionProcessHandler transactionProcessHandler;
 
-    private final StatementGenerator statementGenerator;
+    private static  StatementGenerator statementGenerator;
 
     private Main() {
         this.transactionManager = new TransactionManager();
@@ -119,30 +119,38 @@ public class Main {
                 default -> throw new IllegalArgumentException("Invalid transaction type");
             }
         } catch (Exception e) {
-            System.out.println("Transaction Failed: " + e.getMessage());
+            print("Transaction Failed: " + e.getMessage());
         }
     }
     private static void generateAccountStatements() {
-        System.out.println("\nGENERATE ACCOUNT STATEMENT");
-        System.out.print("Enter Account Number: ");
-        String accountNumber = scanner.nextLine().trim();
+        print("\nGENERATE ACCOUNT STATEMENT");
+        String accountNumber = readString("Enter Account Number: ",
+                s -> !s.isEmpty(),
+                "Account Number cannot be empty."
+        );
+
+        if (!accountManager.accountExists(accountNumber)) {
+            print("Error: Account not found. Please check the account number and try again.");
+            pressEnterToContinue();
+            return;
+        }
 
         String statement = statementGenerator.generateStatement(accountNumber);
-        System.out.println("\n" + statement);
+        print("\n" + statement);
     }
 
     private static void runTests() {
-        System.out.println("\nRunning tests with JUnit...\n");
+        print("\nRunning tests with JUnit...\n");
 
         // These are just console outputs to simulate test results
         // Actual JUnit tests will be in the test files
-        System.out.println("Test: depositUpdatesBalance() ...... PASSED");
-        System.out.println("Test: withdrawBelowMinimumThrowException() ...... PASSED");
-        System.out.println("Test: overdraftWithinLimitAllowed() ...... PASSED");
-        System.out.println("Test: overdraftExceedThrowsException() ...... PASSED");
-        System.out.println("Test: transferBetweenAccounts() ...... PASSED");
+        print("Test: depositUpdatesBalance() ...... PASSED");
+        print("Test: withdrawBelowMinimumThrowException() ...... PASSED");
+        print("Test: overdraftWithinLimitAllowed() ...... PASSED");
+        print("Test: overdraftExceedThrowsException() ...... PASSED");
+        print("Test: transferBetweenAccounts() ...... PASSED");
 
-        System.out.println("\n✓ All 5 tests passed successfully!");
+        print("\n✓ All 5 tests passed successfully!");
     }
 
     public static void displayWelcomeMessage() {

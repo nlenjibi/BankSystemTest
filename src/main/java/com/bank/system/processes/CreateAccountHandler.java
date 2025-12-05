@@ -16,7 +16,7 @@ public class CreateAccountHandler {
         this.accountManager = accountManager;
     }
 
-    private record CustomerData(String name, int age, String contact, String address) {}
+    protected record CustomerData(String name, int age, String contact, String address) {}
 
     private void execute() {
         print(" ");
