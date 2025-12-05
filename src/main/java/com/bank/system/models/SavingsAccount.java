@@ -1,5 +1,8 @@
 package com.bank.system.models;
 
+import com.bank.system.exceptions.InsufficientFundsException;
+import com.bank.system.exceptions.InvalidAmountException;
+
 import static com.bank.system.utils.ConsoleUtil.printf;
 public class SavingsAccount extends Account  {
     private static final double INTEREST_RATE = 3.5;
@@ -30,15 +33,18 @@ public class SavingsAccount extends Account  {
     }
 
     @Override
-    public boolean withdraw(double amount) {
+    public boolean withdraw(double amount) throws InvalidAmountException, InsufficientFundsException {
         if (amount <= 0) {
-            return false;
+            throw new InvalidAmountException("Withdrawal amount must be greater than 0");
         }
 
-        // Check if withdrawal would bring balance below minimum
+        double totalAmount = amount;
         if (getBalance() - amount < MINIMUM_BALANCE) {
-            return false;
+            throw new InsufficientFundsException(
+                    String.format("Insufficient funds. Current balance: $%.2f, Requested: $%.2f, Min required: $%.2f",
+                            getBalance(), totalAmount, MINIMUM_BALANCE));
         }
+
 
         setBalance(getBalance() - amount);
         return true;
@@ -54,9 +60,9 @@ public class SavingsAccount extends Account  {
         return MINIMUM_BALANCE;
     }
     @Override
-    public boolean deposit(double amount) {
+    public boolean deposit(double amount) throws InvalidAmountException {
         if (amount <= 0) {
-            return false;
+            throw new InvalidAmountException("Deposit amount must be greater than 0");
         }
 
         setBalance(getBalance() + amount);
@@ -66,10 +72,20 @@ public class SavingsAccount extends Account  {
     public boolean processTransaction(double amount, String type) {
         if (type.equalsIgnoreCase("DEPOSIT")) {
 
-            return deposit(amount);
+            try {
+                return deposit(amount);
+            } catch (InvalidAmountException e) {
+                throw new RuntimeException(e);
+            }
 
         } else if (type.equalsIgnoreCase("WITHDRAWAL")) {
-            return withdraw(amount);
+            try {
+                return withdraw(amount);
+            } catch (InvalidAmountException e) {
+                throw new RuntimeException(e);
+            } catch (InsufficientFundsException e) {
+                throw new RuntimeException(e);
+            }
         }
         return false;
     }
