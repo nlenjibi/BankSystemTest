@@ -1,5 +1,6 @@
 package com.bank.system.services;
 
+import com.bank.system.enums.TransactionType;
 import com.bank.system.exceptions.*;
 import com.bank.system.models.Account;
 import com.bank.system.models.Transaction;
@@ -7,15 +8,13 @@ import com.bank.system.models.Transaction;
 import java.util.ArrayList;
 import java.util.List;
 
-import java.util.stream.Collectors;
-
 public class TransactionManager {
-    private List<Transaction> allTransactions;
+    private final List<Transaction> allTransactions;
 
-    private AccountManager accountManager;
+    private final AccountManager accountManager;
     private int transactionCount;
 
-    public TransactionManager() {
+    public TransactionManager(AccountManager accountManager) {
         this.accountManager = accountManager;
         this.allTransactions = new ArrayList<>();
 
@@ -30,47 +29,19 @@ public class TransactionManager {
         return true;
     }
 
-
-
-
-
     // Method to calculate total withdrawals for an account
 
     public double totalWithdrawals(String accountNumber) {
-        if (allTransactions == null || allTransactions.isEmpty()) return 0.0;
-        return allTransactions.stream()
-                .filter(t -> t != null
-                        && accountNumber.equals(t.getAccountNumber())
-                        && "WITHDRAWAL".equalsIgnoreCase(t.getType()))
-                .mapToDouble(Transaction::getAmount)
-                .sum();
+        return sumAmountsForTypes(accountNumber, TransactionType.WITHDRAWAL);
     }
-    public double calculateTotalTransfers(String accountNumber) {
-        if (allTransactions == null || allTransactions.isEmpty()) return 0.0;
-        return allTransactions.stream()
-                .filter(t -> t != null
-                        && accountNumber.equals(t.getAccountNumber())
-                        && "TRANSFER".equalsIgnoreCase(t.getType()))
-                .mapToDouble(Transaction::getAmount)
-                .sum();
+    public double totalTransfered(String accountNumber) {
+        return sumAmountsForTypes(accountNumber, TransactionType.TRANSFER);
     }
     public double totalDeposits(String accountNumber) {
-        if (allTransactions == null || allTransactions.isEmpty()) return 0.0;
-        return allTransactions.stream()
-                .filter(t -> t != null
-                        && accountNumber.equals(t.getAccountNumber())
-                        && "DEPOSIT".equalsIgnoreCase(t.getType()))
-                .mapToDouble(Transaction::getAmount)
-                .sum();
+        return sumAmountsForTypes(accountNumber, TransactionType.DEPOSIT);
     }
-    public double totalReceives(String accountNumber) {
-        if (allTransactions == null || allTransactions.isEmpty()) return 0.0;
-        return allTransactions.stream()
-                .filter(t -> t != null
-                        && accountNumber.equals(t.getAccountNumber())
-                        && "RECEIVE".equalsIgnoreCase(t.getType()))
-                .mapToDouble(Transaction::getAmount)
-                .sum();
+    public double totalReceived(String accountNumber) {
+        return sumAmountsForTypes(accountNumber, TransactionType.RECEIVE);
     }
 
 
@@ -80,7 +51,7 @@ public class TransactionManager {
     }
 
 
-    public boolean deposit(String accountNumber, double amount) throws InvalidAmountException, InsufficientFundsException, OverdraftExceededException {
+    public boolean deposit(String accountNumber, double amount) throws InvalidAmountException {
         Account account = accountManager.getAccount(accountNumber);
         if (account == null) {
             throw new InvalidAmountException("Account not found: " + accountNumber);
@@ -90,20 +61,21 @@ public class TransactionManager {
             throw new InvalidAmountException("Deposit amount must be greater than 0");
         }
 
-        double previousBalance = account.getBalance();
-        account.deposit(amount);
+        boolean success = account.processTransaction(amount, TransactionType.DEPOSIT);
         double newBalance = account.getBalance();
 
         // Create and record the transaction
+        if(success) {
+            Transaction transaction = createTransaction(accountNumber, TransactionType.DEPOSIT, amount, newBalance);
+            allTransactions.add(transaction);
+            account.addTransaction(transaction);
+            return true;
+        }
+        return false;
 
-        Transaction transaction = new Transaction( accountNumber, "DEPOSIT", amount, newBalance);
-        allTransactions.add(transaction);
-        account.addTransaction(transaction);
-
-        return true;
     }
 
-    public boolean withdraw(String accountNumber, double amount) throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException {
+    public boolean withdraw(String accountNumber, double amount) throws InvalidAmountException {
         Account account = accountManager.getAccount(accountNumber);
         if (account == null) {
             throw new InvalidAmountException("Account not found: " + accountNumber);
@@ -113,23 +85,23 @@ public class TransactionManager {
             throw new InvalidAmountException("Withdrawal amount must be greater than 0");
         }
 
-        double previousBalance = account.getBalance();
-        boolean success = account.withdraw(amount);
+        boolean success = account.processTransaction(amount, TransactionType.WITHDRAWAL);
         double newBalance = account.getBalance();
 
         if (success) {
             // Create and record the transaction
 
-            Transaction transaction = new Transaction( accountNumber, "WITHDRAWAL", amount, newBalance);
+            Transaction transaction = createTransaction(accountNumber, TransactionType.WITHDRAWAL, amount, newBalance);
             allTransactions.add(transaction);
             account.addTransaction(transaction);
+            return true;
         }
+        return false;
 
-        return success;
     }
 
     public boolean transfer(String fromAccountNumber, String toAccountNumber, double amount)
-            throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException {
+            throws InvalidAmountException {
         Account fromAccount = accountManager.getAccount(fromAccountNumber);
         Account toAccount = accountManager.getAccount(toAccountNumber);
 
@@ -146,33 +118,36 @@ public class TransactionManager {
         }
 
         // Perform withdrawal from source account
-        double previousFromBalance = fromAccount.getBalance();
-        fromAccount.withdraw(amount);
+        boolean fromSuccess =  fromAccount.processTransaction(amount, TransactionType.WITHDRAWAL);
         double newFromBalance = fromAccount.getBalance();
 
         // Perform deposit to destination account
-        double previousToBalance = toAccount.getBalance();
-        toAccount.deposit(amount);
+
+        boolean toSuccess = toAccount.processTransaction(amount, TransactionType.DEPOSIT);
         double newToBalance = toAccount.getBalance();
 
         // Record withdrawal transaction
-
-        Transaction withdrawalTransaction = new Transaction( fromAccountNumber, "TRANSFER_OUT", amount, newFromBalance);
-        allTransactions.add(withdrawalTransaction);
-        fromAccount.addTransaction(withdrawalTransaction);
-
+        if(fromSuccess) {
+            Transaction withdrawalTransaction = createTransaction(fromAccountNumber, TransactionType.TRANSFER, amount, newFromBalance);
+            allTransactions.add(withdrawalTransaction);
+            fromAccount.addTransaction(withdrawalTransaction);
+        }
         // Record deposit transaction
-
-        Transaction depositTransaction = new Transaction( toAccountNumber, "TRANSFER_IN", amount, newToBalance);
-        allTransactions.add(depositTransaction);
-        toAccount.addTransaction(depositTransaction);
-
+        if (toSuccess) {
+            Transaction depositTransaction = createTransaction(toAccountNumber, TransactionType.RECEIVE, amount, newToBalance);
+            allTransactions.add(depositTransaction);
+            toAccount.addTransaction(depositTransaction);
+        }
         return true;
     }
     public List<Transaction> getTransactionsForAccount(String accountNumber) {
-        return allTransactions.stream()
-                .filter(transaction -> transaction.getAccountNumber().equals(accountNumber))
-                .collect(Collectors.toList());
+        List<Transaction> accountTransactions = new ArrayList<>();
+        for (Transaction transaction : allTransactions) {
+            if (isMatchingAccount(transaction, accountNumber)) {
+                accountTransactions.add(transaction);
+            }
+        }
+        return accountTransactions;
     }
 
     public List<Transaction> getAllTransactions() {
@@ -186,14 +161,48 @@ public class TransactionManager {
         allTransactions.removeIf(transaction -> transaction.getTransactionId().equals(transactionId));
     }
     public Transaction getLastTransaction(String accountNumber) {
-        if (allTransactions == null || allTransactions.isEmpty()) return null;
+        if (allTransactions.isEmpty()) return null;
         for (int i = allTransactions.size() - 1; i >= 0; i--) {
             Transaction transaction = allTransactions.get(i);
-            if (transaction != null && accountNumber.equals(transaction.getAccountNumber())) {
+            if (isMatchingAccount(transaction, accountNumber)) {
                 return transaction;
             }
         }
         return null;
     }
 
+    private double sumAmountsForTypes(String accountNumber, TransactionType... types) {
+        if (allTransactions.isEmpty()) return 0.0;
+        double sum = 0.0;
+        for (Transaction transaction : allTransactions) {
+            if (!isMatchingAccount(transaction, accountNumber)) {
+                continue;
+            }
+            if (matchesType(transaction, types)) {
+                sum += transaction.getAmount();
+            }
+        }
+        return sum;
+    }
+
+    private boolean isMatchingAccount(Transaction transaction, String accountNumber) {
+        return transaction != null && accountNumber.equals(transaction.getAccountNumber());
+    }
+
+    private boolean matchesType(Transaction transaction, TransactionType... types) {
+        if (types == null || types.length == 0) {
+            return false;
+        }
+        String transactionType = transaction.getType();
+        for (TransactionType type : types) {
+            if (type.name().equalsIgnoreCase(transactionType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Transaction createTransaction(String accountNumber, TransactionType type, double amount, double balanceAfter) {
+        return new Transaction(accountNumber, type.name(), amount, balanceAfter);
+    }
 }

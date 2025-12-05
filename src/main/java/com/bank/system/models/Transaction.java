@@ -2,6 +2,7 @@ package com.bank.system.models;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.bank.system.utils.ConsoleFormatter.printSubSeparator;
 import static com.bank.system.utils.ConsoleUtil.*;
@@ -13,7 +14,8 @@ public class Transaction {
     private final double amount;
     private final double balanceAfter;
     private final String timestamp;
-    private static int transactionCounter = 0;
+    private static final AtomicInteger TRANSACTION_COUNTER = new AtomicInteger(0);
+    private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
 
     public Transaction(String accountNumber, String type, double amount, double balanceAfter) {
         this.accountNumber = accountNumber;
@@ -25,14 +27,11 @@ public class Transaction {
     }
 
     private String generateTransactionId() {
-        transactionCounter++;
-        return String.format("TXN%03d", transactionCounter);
+        return String.format("TXN%03d", TRANSACTION_COUNTER.incrementAndGet());
     }
 
     private String getCurrentTimestamp() {
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
-        return now.format(formatter);
+        return LocalDateTime.now().format(TIMESTAMP_FORMATTER);
     }
 
     // Method to display transaction details
@@ -43,9 +42,9 @@ public class Transaction {
         print("Transaction ID: " + transactionId);
         print("Account: " + accountNumber);
         print("Type: " + type);
-        System.out.printf("Amount: $%,.2f%n", amount);
+        printf("Amount: $%,.2f%n", amount);
         printf("Previous Balance: $%,.2f%n", previousBalance);
-        System.out.printf("NewBalance : $%,.2f%n", balanceAfter);
+        printf("NewBalance : $%,.2f%n", balanceAfter);
         print("Date/Time: " + timestamp);
         printSubSeparator(60);
     }
@@ -76,7 +75,7 @@ public class Transaction {
     }
 
     public static int getTransactionCounter() {
-        return transactionCounter;
+        return TRANSACTION_COUNTER.get();
     }
 
 

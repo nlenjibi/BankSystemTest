@@ -1,7 +1,9 @@
 package com.bank.system.models;
 
+import com.bank.system.enums.TransactionType;
 import com.bank.system.exceptions.InvalidAmountException;
 import com.bank.system.exceptions.OverdraftExceededException;
+
 
 import static com.bank.system.utils.ConsoleUtil.printf;
 
@@ -71,28 +73,31 @@ public class CheckingAccount extends Account {
     }
 
     @Override
-    public boolean processTransaction(double amount, String type) {
-        if (type.equalsIgnoreCase("DEPOSIT")) {
-
-            try {
-                return deposit(amount);
-            } catch (InvalidAmountException e) {
-                throw new RuntimeException(e);
-            }
-
-        } else if (type.equalsIgnoreCase("WITHDRAWAL")) {
-            try {
-                return withdraw(amount);
-            } catch (InvalidAmountException e) {
-                throw new RuntimeException(e);
-            } catch (OverdraftExceededException e) {
-                throw new RuntimeException(e);
-            }
+    public boolean processTransaction(double amount, TransactionType type) {
+        if (type == null) {
+            return false;
         }
-        return false;
+        return switch (type) {
+            case DEPOSIT -> executeTransaction(() -> deposit(amount));
+            case WITHDRAWAL -> executeTransaction(() -> withdraw(amount));
+            default -> false;
+        };
     }
 
     public double getMaxWithdrawalAmount() {
         return getBalance() + OVERDRAFT_LIMIT;
+    }
+
+    private boolean executeTransaction(TransactionCommand command) {
+        try {
+            return command.run();
+        } catch (InvalidAmountException | OverdraftExceededException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @FunctionalInterface
+    private interface TransactionCommand {
+        boolean run() throws InvalidAmountException, OverdraftExceededException;
     }
 }

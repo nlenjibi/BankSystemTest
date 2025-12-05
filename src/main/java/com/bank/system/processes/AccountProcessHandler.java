@@ -1,62 +1,44 @@
 package com.bank.system.processes;
 
 
+import com.bank.system.enums.TransactionType;
 import com.bank.system.services.*;
 import com.bank.system.models.*;
 import com.bank.system.models.Transaction;
-
+import java.util.List;
 import static com.bank.system.utils.ConsoleUtil.*;
+
+
 public class AccountProcessHandler {
-    private static TransactionManager transactionManager;
-    private static  AccountManager accountManager;
+    private static final double REGULAR_MIN_DEPOSIT = 500;
+    private static final double PREMIUM_MIN_DEPOSIT = 10000;
+    private final TransactionManager transactionManager;
+    private final AccountManager accountManager;
 
     public AccountProcessHandler(AccountManager accountManager, TransactionManager transactionManager) {
         this.transactionManager = transactionManager;
         this.accountManager = accountManager;
     }
     private record CustomerData(String name, int age, String contact, String address) {}
+    private record AccountCreation(Account account, double initialDeposit) {}
 
-    public static void createAccount() {
+    public void createAccount() {
         print(" ");
         print("ACCOUNT CREATION");
         print(" ");
 
-        CustomerData data = readCustomerDetails();
-        Customer customer = createCustomerFromData(data);
-        print(" ");
-        print("Account type:");
-        boolean isRegular = "Regular".equals(customer.getCustomerType());
-        double savingsMin = isRegular ? 500 : 10000;
-        print("1. Savings Account (Interest: 3.5% Min Balance: $" + String.format("%,.0f", savingsMin) + ")");
-        print("2. Checking Account (Overdraft: $1,000, Monthly Fee: $10)");
-        int accountType = getValidIntInput("Select type (1-2): ", 1, 2);
-        double initialDeposit = getValidDoubleInput(
-                "Enter initial deposit amount: $",
-                v -> v >= savingsMin,
-                "Value must be greater than or equal to $" + String.format("%,.0f", savingsMin) + "."
-        );
+        Customer customer = createCustomerFromData(readCustomerDetails());
+        AccountCreation creation = selectAccountType(customer);
 
-        Account account = (accountType == 2)
-                ? new CheckingAccount(customer, initialDeposit)
-                : new SavingsAccount(customer, initialDeposit);
-
-        if (accountManager.addAccount(account)) {
-            Transaction transaction = new Transaction(
-                    account.getAccountNumber(),
-                    account.getAccountType(),
-                    initialDeposit,
-                    account.getBalance()
-            );
-
-            transactionManager.addTransaction(transaction);
-            displayAccountCreatedInfo(account, customer);
+        if (persistNewAccount(creation)) {
+            displayAccountCreatedInfo(creation.account(), customer);
         } else {
             print("Failed to create account. Maximum account limit reached.");
         }
         print(" ");
         pressEnterToContinue();
     }
-    private static CustomerData readCustomerDetails() {
+    private CustomerData readCustomerDetails() {
         String name = readString("Enter Customer Name: ",
                 s -> s != null && !s.trim().isEmpty() && !s.matches(".*\\d.*"),
                 "Name cannot be empty and cannot contain digits.");
@@ -74,7 +56,7 @@ public class AccountProcessHandler {
         return new CustomerData(name, age, contact, address);
     }
 
-    private static void displayAccountCreatedInfo(Account account, Customer customer) {
+    private void displayAccountCreatedInfo(Account account, Customer customer) {
         print(" ");
         print("✓ Account created successfully!");
         print("Account Number: " + account.getAccountNumber());
@@ -95,8 +77,48 @@ public class AccountProcessHandler {
         }
         print("Status: " + account.getStatus());
     }
+    private AccountCreation selectAccountType(Customer customer) {
+        print(" ");
+        print("Account type:");
 
-    private static Customer createCustomerFromData(CustomerData data) {
+        double savingsMin = minimumSavingsDeposit(customer);
+        print("1. Savings Account (Interest: 3.5% Min Balance: $" + String.format("%,.0f", savingsMin) + ")");
+        print("2. Checking Account (Overdraft: $1,000, Monthly Fee: $10)");
+        int accountType = getValidIntInput("Select type (1-2): ", 1, 2);
+        double initialDeposit = getValidDoubleInput(
+                "Enter initial deposit amount: $",
+                v -> v >= savingsMin,
+                "Value must be greater than or equal to $" + String.format("%,.0f", savingsMin) + "."
+        );
+
+        Account account = (accountType == 2)
+                ? new CheckingAccount(customer, initialDeposit)
+                : new SavingsAccount(customer, initialDeposit);
+
+        return new AccountCreation(account, initialDeposit);
+    }
+
+    private double minimumSavingsDeposit(Customer customer) {
+        return (customer instanceof PremiumCustomer) ? PREMIUM_MIN_DEPOSIT : REGULAR_MIN_DEPOSIT;
+    }
+
+    private boolean persistNewAccount(AccountCreation creation) {
+        Account account = creation.account();
+        if (!accountManager.addAccount(account)) {
+            return false;
+        }
+        Transaction transaction = new Transaction(
+                account.getAccountNumber(),
+                TransactionType.DEPOSIT.name(),
+                creation.initialDeposit(),
+                account.getBalance()
+        );
+        transactionManager.addTransaction(transaction);
+        account.addTransaction(transaction);
+        return true;
+    }
+
+    private Customer createCustomerFromData(CustomerData data) {
 
         print(" ");
         print("Customer type:");
@@ -112,7 +134,7 @@ public class AccountProcessHandler {
         }
     }
 
-    public static void viewAccountDetails() {
+    public void viewAccountDetails() {
         print("\nVIEW ACCOUNT DETAILS");
         String accountNumber = readString("Enter Account Number: ",
                 s -> !s.isEmpty(),
@@ -127,27 +149,30 @@ public class AccountProcessHandler {
 
         Account account = accountManager.getAccount(accountNumber);
         if (account != null) {
-            print("\nAccount Details:");
-            print("Account Number: " + account.getAccountNumber());
-            print("Account Type: " + account.getClass().getSimpleName());
-            print("Customer: " + account.getCustomer().getName());
-            print("Customer Type: " + account.getCustomer().getClass().getSimpleName());
-            print("Current Balance: $" + String.format("%.2f", account.getBalance()));
-
-            if (account instanceof SavingsAccount) {
-                SavingsAccount savings = (SavingsAccount) account;
-                print("Minimum Balance: $" + String.format("%.2f", savings.getMinimumBalance()));
-            } else if (account instanceof CheckingAccount) {
-                CheckingAccount checking = (CheckingAccount) account;
-                print("Overdraft Limit: $" + String.format("%.2f", checking.getOverdraftLimit()));
-                print("Max Withdrawal Amount: $" + String.format("%.2f", checking.getMaxWithdrawalAmount()));
-            }
+            displayAccountDetails(account);
         } else {
             print("\nError: Account not found. Please check the account number and try again.");
         }
+        pressEnterToContinue();
     }
 
-    public static void listAllAccounts() {
+    private void displayAccountDetails(Account account) {
+        print("\nAccount Details:");
+        print("Account Number: " + account.getAccountNumber());
+        print("Account Type: " + account.getClass().getSimpleName());
+        print("Customer: " + account.getCustomer().getName());
+        print("Customer Type: " + account.getCustomer().getClass().getSimpleName());
+        print("Current Balance: $" + String.format("%.2f", account.getBalance()));
+
+        if (account instanceof SavingsAccount savings) {
+            print("Minimum Balance: $" + String.format("%.2f", savings.getMinimumBalance()));
+        } else if (account instanceof CheckingAccount checking) {
+            print("Overdraft Limit: $" + String.format("%.2f", checking.getOverdraftLimit()));
+            print("Max Withdrawal Amount: $" + String.format("%.2f", checking.getMaxWithdrawalAmount()));
+        }
+    }
+
+    public void listAllAccounts() {
        accountManager.viewAllAccounts();
     }
     public void initializeSampleData() {
@@ -157,17 +182,15 @@ public class AccountProcessHandler {
         Customer customer4 = new RegularCustomer("Emily Brown", 31, "+1-555-0104", "654 Maple Drive, Metropolis");
         Customer customer5 = new PremiumCustomer("David Wilson", 48, "+1-555-0105", "987 Cedar Lane, Metropolis");
 
-        Account account1 = new SavingsAccount(customer1, 5250.00);
-        Account account2 = new CheckingAccount(customer2, 3450.00);
-        Account account3 = new SavingsAccount(customer3, 15750.00);
-        Account account4 = new CheckingAccount(customer4, 890.00);
-        Account account5 = new SavingsAccount(customer5, 25300.00);
+        List<AccountCreation> samples = List.of(
+                new AccountCreation(new SavingsAccount(customer1, 5250.00), 5250.00),
+                new AccountCreation(new CheckingAccount(customer2, 3450.00), 3450.00),
+                new AccountCreation(new SavingsAccount(customer3, 15750.00), 15750.00),
+                new AccountCreation(new CheckingAccount(customer4, 890.00), 890.00),
+                new AccountCreation(new SavingsAccount(customer5, 25300.00), 25300.00)
+        );
 
-        accountManager.addAccount(account1);
-        accountManager.addAccount(account2);
-        accountManager.addAccount(account3);
-        accountManager.addAccount(account4);
-        accountManager.addAccount(account5);
+        samples.forEach(this::persistNewAccount);
     }
 
 

@@ -14,19 +14,17 @@ import static com.bank.system.utils.ConsoleUtil.*;
 
 public class Main {
 
-    private static TransactionManager transactionManager;
-    private static AccountManager accountManager;
-    private static AccountProcessHandler accountprocesshandler;
-    private static  TransactionProcessHandler transactionProcessHandler;
-
-    private static  StatementGenerator statementGenerator;
+    private final TransactionManager transactionManager;
+    private final AccountManager accountManager;
+    private final AccountProcessHandler accountProcessHandler;
+    private final TransactionProcessHandler transactionProcessHandler;
+    private final StatementGenerator statementGenerator;
 
     private Main() {
-        this.transactionManager = new TransactionManager();
         this.accountManager = new AccountManager();
-        this.accountprocesshandler = new AccountProcessHandler(accountManager, transactionManager);
+        this.transactionManager = new TransactionManager(accountManager);
+        this.accountProcessHandler = new AccountProcessHandler(accountManager, transactionManager);
         this.transactionProcessHandler = new TransactionProcessHandler(accountManager, transactionManager);
-
         this.statementGenerator = new StatementGenerator(accountManager, transactionManager);
     }
 
@@ -36,7 +34,7 @@ public class Main {
 
     private void run() {
         displayWelcomeMessage();
-        accountprocesshandler.initializeSampleData();
+        accountProcessHandler.initializeSampleData();
         boolean running = true;
         while (running) {
             displayMainMenu();
@@ -68,7 +66,7 @@ public class Main {
             default -> true;
         };
     }
-    private static void manageAccounts() {
+    private void manageAccounts() {
         print("\nMANAGE ACCOUNTS");
         print("1. Create Account");
         print("2. View Account Details");
@@ -78,16 +76,16 @@ public class Main {
         int choice = getValidIntInput("Enter your choice: ", 1, 3);
 
         switch (choice) {
-            case 1-> accountprocesshandler.createAccount();
+            case 1-> accountProcessHandler.createAccount();
 
-            case 2 -> accountprocesshandler.viewAccountDetails();
+            case 2 -> accountProcessHandler.viewAccountDetails();
 
-            case 3 -> accountprocesshandler.listAllAccounts();
+            case 3 -> accountProcessHandler.listAllAccounts();
 
         }
     }
 
-    private static void performTransactions() {
+    private void performTransactions() {
         print(" ");
         print("PROCESS TRANSACTION");
         printSubSeparator(60);
@@ -122,7 +120,7 @@ public class Main {
             print("Transaction Failed: " + e.getMessage());
         }
     }
-    private static void generateAccountStatements() {
+    private void generateAccountStatements() {
         print("\nGENERATE ACCOUNT STATEMENT");
         String accountNumber = readString("Enter Account Number: ",
                 s -> !s.isEmpty(),
@@ -137,9 +135,10 @@ public class Main {
 
         String statement = statementGenerator.generateStatement(accountNumber);
         print("\n" + statement);
+        pressEnterToContinue();
     }
 
-    private static void runTests() {
+    private void runTests() {
         print("\nRunning tests with JUnit...\n");
 
         // These are just console outputs to simulate test results
@@ -151,14 +150,15 @@ public class Main {
         print("Test: transferBetweenAccounts() ...... PASSED");
 
         print("\n✓ All 5 tests passed successfully!");
+        pressEnterToContinue();
     }
 
-    public static void displayWelcomeMessage() {
+    public void displayWelcomeMessage() {
         print("\nWelcome to the Bank Account Management System!");
         print("Please select an option from the menu below:");
     }
 
-    private static void displayMainMenu() {
+    private void displayMainMenu() {
         printHeader("BANK ACCOUNT MANAGEMENT SYSTEM - MAIN MENU");
         print("BANK ACCOUNT MANAGEMENT - MAIN MENU");
         print(" ");
@@ -170,7 +170,7 @@ public class Main {
         print("");
     }
 
-    private static void shutdown() {
+    private void shutdown() {
         print("\nThank you for using Bank Account Management System!");
         print("All data saved in memory. Remember to commit your latest changes to Git!");
         print("Goodbye!");

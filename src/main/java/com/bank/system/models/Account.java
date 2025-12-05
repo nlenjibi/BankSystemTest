@@ -5,7 +5,9 @@ import com.bank.system.exceptions.OverdraftExceededException;
 import com.bank.system.interfaces.Transactable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public abstract class Account implements Transactable {
@@ -13,8 +15,8 @@ public abstract class Account implements Transactable {
     private final Customer customer;
     private double balance;
     private final String status;
-    protected List<Transaction> transactions;
-    private static int accountCounter = 0;
+    protected final List<Transaction> transactions;
+    private static final AtomicInteger ACCOUNT_COUNTER = new AtomicInteger(0);
 
      protected Account(Customer customer, double initialDeposit) {
         this.customer = customer;
@@ -25,8 +27,7 @@ public abstract class Account implements Transactable {
     }
 
     private static String generateAccountNumber() {
-        accountCounter++;
-        return String.format("ACC%03d", accountCounter);
+        return String.format("ACC%03d", ACCOUNT_COUNTER.incrementAndGet());
     }
 
     // Abstract methods to be implemented by subclasses
@@ -52,19 +53,23 @@ public abstract class Account implements Transactable {
     }
 
     public List<Transaction> getTransactions() {
-        return new ArrayList<>(transactions);
+        return Collections.unmodifiableList(transactions);
     }
 
     public void addTransaction(Transaction transaction) {
-        this.transactions.add(transaction);
+        if (transaction != null) {
+            transactions.add(transaction);
+        }
     }
-   public void removeTransaction(Transaction transaction) {
-       this.transactions.remove(transaction);
+   public boolean removeTransaction(Transaction transaction) {
+       return transaction != null && transactions.remove(transaction);
    }
 
    public boolean removeTransactionById(String transactionId) {
-       if (transactionId == null) return false;
-       return this.transactions.removeIf(t -> transactionId.equals(t.getTransactionId()));
+       if (transactionId == null) {
+           return false;
+       }
+       return transactions.removeIf(t -> transactionId.equals(t.getTransactionId()));
    }
 
     public double getBalance() {

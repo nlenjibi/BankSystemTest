@@ -1,5 +1,6 @@
 package com.bank.system.processes;
 
+
 import com.bank.system.exceptions.*;
 import com.bank.system.models.Account;
 import com.bank.system.models.SavingsAccount;
@@ -17,7 +18,8 @@ public class TransactionProcessHandler {
         this.transactionManager = transactionManager;
         this.accountManager = accountManager;
     }
-    public void performDeposit(String accountNumber) throws InvalidAmountException, InsufficientFundsException, OverdraftExceededException {
+    public void performDeposit(String accountNumber) throws InvalidAmountException {
+
 
         double amount = getValidDoubleInput("Enter amount to deposit: $",
                 v -> v > 0,
@@ -42,14 +44,14 @@ public class TransactionProcessHandler {
         }
         print(" ");
         boolean confirmed = readConfirmation("Confirm transaction?");
-        handleTransactionConfirmation(confirmed, account, previousBalance, transaction != null ? transaction.getTransactionId() : null);
+        handleTransactionConfirmation(confirmed, account, previousBalance, captureTransactions(accountNumber));
         pressEnterToContinue();
 
 
     }
 
 
-    public void performWithdrawal(String accountNumber) throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException {
+    public void performWithdrawal(String accountNumber) throws InvalidAmountException {
         double amount = getValidDoubleInput("Enter amount to withdraw: $",
                 v -> v > 0,
                 "Amount must be greater than zero.");
@@ -77,12 +79,12 @@ public class TransactionProcessHandler {
         }
         print(" ");
         boolean confirmed = readConfirmation("Confirm transaction?");
-        handleTransactionConfirmation(confirmed, account, previousBalance, transaction != null ? transaction.getTransactionId() : null);
+        handleTransactionConfirmation(confirmed, account, previousBalance, captureTransactions(accountNumber));
         pressEnterToContinue();
 
     }
 
-    public void performTransfer(String fromAccountNumber) throws InsufficientFundsException, InvalidAmountException, OverdraftExceededException {
+    public void performTransfer(String fromAccountNumber) throws InvalidAmountException {
         String toAccountNumber = readString("Enter destination account number: ",
                 s -> !s.isEmpty(),
                 "Account Number cannot be empty."
@@ -125,27 +127,73 @@ public class TransactionProcessHandler {
             print("Transfer Amount: $" + String.format("%.2f", amount));
         }
         else {
-            transactionManager.removeTransaction(fromTransaction != null ? fromTransaction.getTransactionId() : null);
-            transactionManager.removeTransaction(toTransaction != null ? toTransaction.getTransactionId() : null);
-            fromAccount.removeTransactionById(fromTransaction != null ? fromTransaction.getTransactionId() : null);
-            toAccount.removeTransactionById(toTransaction != null ? toTransaction.getTransactionId() : null);
+            rollbackTransactions(captureTransactions(fromAccountNumber), captureTransactions(toAccountNumber), fromAccount, toAccount, fromPreviousBalance, toPreviousBalance);
             fromAccount.setBalance(fromPreviousBalance);
             toAccount.setBalance(toPreviousBalance);
             print(" ");
             print("Transaction cancelled.");
 
+
         }
     }
-    private void handleTransactionConfirmation(boolean confirmed, Account account, double previousBalance, String transaction) {
+    private void handleTransactionConfirmation(boolean confirmed, Account account, double previousBalance, TransactionSnapshot snapshot) {
         if (confirmed) {
             print(" ");
             print("✓ Transaction completed successfully!");
         } else {
-            transactionManager.removeTransaction(transaction);
-            account.removeTransactionById(transaction);
-            account.setBalance(previousBalance);
+            rollbackTransactions(snapshot, account, previousBalance);
             print(" ");
             print("Transaction cancelled.");
+        }
+        pressEnterToContinue();
+        
+    }
+
+    private TransactionSnapshot captureTransactions(String accountNumber) {
+        TransactionSnapshot snapshot = new TransactionSnapshot(accountNumber);
+        snapshot.capture(transactionManager.getTransactionsForAccount(accountNumber));
+        return snapshot;
+    }
+
+    private void rollbackTransactions(TransactionSnapshot snapshot, Account account, double previousBalance) {
+        if (snapshot == null) {
+            return;
+        }
+        snapshot.removeFrom(transactionManager, account);
+        account.setBalance(previousBalance);
+    }
+
+    private void rollbackTransactions(TransactionSnapshot fromSnapshot, TransactionSnapshot toSnapshot,
+                                      Account fromAccount, Account toAccount,
+                                      double fromBalance, double toBalance) {
+        rollbackTransactions(fromSnapshot, fromAccount, fromBalance);
+        rollbackTransactions(toSnapshot, toAccount, toBalance);
+    }
+
+    private static final class TransactionSnapshot {
+        private final String accountNumber;
+        private String latestTransactionId;
+
+        private TransactionSnapshot(String accountNumber) {
+            this.accountNumber = accountNumber;
+        }
+
+        private void capture(java.util.List<Transaction> transactions) {
+            if (transactions == null || transactions.isEmpty()) {
+                return;
+            }
+            Transaction latest = transactions.get(transactions.size() - 1);
+            if (latest != null && accountNumber.equals(latest.getAccountNumber())) {
+                this.latestTransactionId = latest.getTransactionId();
+            }
+        }
+
+        private void removeFrom(TransactionManager manager, Account account) {
+            if (latestTransactionId == null) {
+                return;
+            }
+            manager.removeTransaction(latestTransactionId);
+            account.removeTransactionById(latestTransactionId);
         }
     }
 
