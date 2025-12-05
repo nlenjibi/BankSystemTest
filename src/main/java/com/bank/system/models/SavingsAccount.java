@@ -1,10 +1,16 @@
 package com.bank.system.models;
 
+import com.bank.system.enums.TransactionType;
+import com.bank.system.exceptions.InsufficientFundsException;
+import com.bank.system.exceptions.InvalidAmountException;
+import java.util.Locale;
+
 import static com.bank.system.utils.ConsoleUtil.printf;
 public class SavingsAccount extends Account  {
     private static final double INTEREST_RATE = 3.5;
     private static final double MINIMUM_BALANCE = 500.0;
     private static final double WITHDRAWAL_FEE = 2.0;
+
     public SavingsAccount(Customer customer, double initialBalance) {
         super(customer, initialBalance);
 
@@ -30,17 +36,21 @@ public class SavingsAccount extends Account  {
     }
 
     @Override
-    public boolean withdraw(double amount) {
+    public boolean withdraw(double amount) throws InvalidAmountException, InsufficientFundsException {
         if (amount <= 0) {
-            return false;
+            throw new InvalidAmountException("Withdrawal amount must be greater than 0");
         }
 
-        // Check if withdrawal would bring balance below minimum
-        if (getBalance() - amount < MINIMUM_BALANCE) {
-            return false;
+        double withdrawalTotal = amount + WITHDRAWAL_FEE;
+        if (getBalance() - withdrawalTotal < MINIMUM_BALANCE) {
+            throw new InsufficientFundsException(
+                    String.format(
+                            "Insufficient funds. Current balance: $%.2f, Requested: $%.2f (incl. $%.2f fee), Min required: $%.2f",
+                            getBalance(), withdrawalTotal, WITHDRAWAL_FEE, MINIMUM_BALANCE));
         }
 
-        setBalance(getBalance() - amount);
+
+        setBalance(getBalance() - withdrawalTotal);
         return true;
     }
 
@@ -54,24 +64,37 @@ public class SavingsAccount extends Account  {
         return MINIMUM_BALANCE;
     }
     @Override
-    public boolean deposit(double amount) {
+    public boolean deposit(double amount) throws InvalidAmountException {
         if (amount <= 0) {
-            return false;
+            throw new InvalidAmountException("Deposit amount must be greater than 0");
         }
 
         setBalance(getBalance() + amount);
         return true;
     }
     @Override
-    public boolean processTransaction(double amount, String type) {
-        if (type.equalsIgnoreCase("DEPOSIT")) {
-
-            return deposit(amount);
-
-        } else if (type.equalsIgnoreCase("WITHDRAWAL")) {
-            return withdraw(amount);
+    public boolean processTransaction(double amount, TransactionType type) {
+        if (type == null) {
+            return false;
         }
-        return false;
+        return switch (type) {
+            case DEPOSIT -> executeTransaction(() -> deposit(amount));
+            case WITHDRAWAL -> executeTransaction(() -> withdraw(amount));
+            default -> false;
+        };
+    }
+
+    private boolean executeTransaction(TransactionCommand command) {
+        try {
+            return command.run();
+        } catch (InvalidAmountException | InsufficientFundsException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @FunctionalInterface
+    private interface TransactionCommand {
+        boolean run() throws InvalidAmountException, InsufficientFundsException;
     }
 
 }

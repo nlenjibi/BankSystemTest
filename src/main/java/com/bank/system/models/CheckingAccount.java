@@ -1,5 +1,10 @@
 package com.bank.system.models;
 
+import com.bank.system.enums.TransactionType;
+import com.bank.system.exceptions.InvalidAmountException;
+import com.bank.system.exceptions.OverdraftExceededException;
+
+
 import static com.bank.system.utils.ConsoleUtil.printf;
 
 public class CheckingAccount extends Account {
@@ -33,23 +38,26 @@ public class CheckingAccount extends Account {
     }
 
     @Override
-    public boolean withdraw(double amount) {
+    public boolean withdraw(double amount) throws InvalidAmountException, OverdraftExceededException {
         if (amount <= 0) {
-            return false;
+            throw new InvalidAmountException("Withdrawal amount must be greater than 0");
         }
 
-        // Check if withdrawal is within balance + overdraft limit
+
         if (getBalance() + OVERDRAFT_LIMIT < amount) {
-            return false;
+            throw new OverdraftExceededException(
+                    String.format("Overdraft limit exceeded. Current balance: $%.2f, Requested: $%.2f, Overdraft limit: $%.2f",
+                            getBalance(), amount, OVERDRAFT_LIMIT));
         }
 
         setBalance(getBalance() - amount);
         return true;
     }
     @Override
-    public boolean deposit(double amount) {
+    public boolean deposit(double amount) throws InvalidAmountException {
+
         if (amount <= 0) {
-            return false;
+            throw new InvalidAmountException("Deposit amount must be greater than 0");
         }
         setBalance(getBalance() + amount);
         return true;
@@ -65,15 +73,31 @@ public class CheckingAccount extends Account {
     }
 
     @Override
-    public boolean processTransaction(double amount, String type) {
-        if (type.equalsIgnoreCase("DEPOSIT")) {
-
-            return deposit(amount);
-
-        } else if (type.equalsIgnoreCase("WITHDRAWAL")) {
-            return withdraw(amount);
+    public boolean processTransaction(double amount, TransactionType type) {
+        if (type == null) {
+            return false;
         }
-        return false;
+        return switch (type) {
+            case DEPOSIT -> executeTransaction(() -> deposit(amount));
+            case WITHDRAWAL -> executeTransaction(() -> withdraw(amount));
+            default -> false;
+        };
     }
 
+    public double getMaxWithdrawalAmount() {
+        return getBalance() + OVERDRAFT_LIMIT;
+    }
+
+    private boolean executeTransaction(TransactionCommand command) {
+        try {
+            return command.run();
+        } catch (InvalidAmountException | OverdraftExceededException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @FunctionalInterface
+    private interface TransactionCommand {
+        boolean run() throws InvalidAmountException, OverdraftExceededException;
+    }
 }

@@ -40,10 +40,15 @@ public class AccountManager {
 
     // Method to view all accounts
     public void viewAllAccounts() {
+        if (getTotalAccounts() == 0) {
+            print("No accounts found.");
+            pressEnterToContinue();
+            return;
+        }
         print(" ");
         printHeader("ACCOUNT LISTING");
         printSeparator();
-        System.out.printf("%-8s | %-15s | %-9s | %-10s | %-8s%n",
+        printf("%-8s | %-15s | %-9s | %-10s | %-8s%n",
                 "ACC NO", "CUSTOMER NAME", "TYPE", "BALANCE", "STATUS");
         printSeparator();
         for (Account acct : accounts) {
@@ -86,7 +91,7 @@ public class AccountManager {
         return accounts.removeIf(acct -> acct.getAccountNumber().equals(accountNumber));
     }
 
-    public int getTotalAccounts() {
+    public  int getTotalAccounts() {
         return accounts.size();
     }
 
